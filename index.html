@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quasoria Launcher: every Eaglercraft version in one place</title>
+    <meta
+      name="description"
+      content="Quasoria Launcher lists every Eaglercraft version, from Indev to 26.3, so you can start any of them in your browser in one click."
+    />
+    <meta name="theme-color" content="#0b0a14" />
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true"></div>
+
+    <header class="nav">
+      <a class="brand" href="#top" aria-label="Quasoria Launcher home">
+        <img src="assets/logo.svg" alt="" width="34" height="34" />
+        <span>Quasoria<em>Launcher</em></span>
+      </a>
+      <nav class="nav-links">
+        <a href="#versions">Versions</a>
+        <a href="#how">How it works</a>
+        <a href="https://github.com/QuasoriaClient/QuasoriaLauncher" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+      <button class="btn btn-ghost nav-continue" id="navContinue" hidden>
+        <span class="dot"></span><span id="navContinueLabel">Continue</span>
+      </button>
+    </header>
+
+    <main id="top">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="pulse"></span><span id="versionCount">10</span> versions, one launcher</p>
+          <h1>Every Eaglercraft version.<br /><span class="grad">One click away.</span></h1>
+          <p class="lede">
+            Quasoria collects every version on eaglercraft.com, from the 2009 Indev build to 26.3,
+            and starts any of them straight in your browser. You don't install or download anything.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" id="heroLaunch">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z"/></svg>
+              <span id="heroLaunchLabel">Play 1.8.8</span>
+            </button>
+            <a class="btn btn-ghost btn-lg" href="#versions">Browse versions</a>
+          </div>
+          <dl class="stats">
+            <div><dt id="statModern">2</dt><dd>Modern</dd></div>
+            <div><dt id="statRelease">3</dt><dd>Release</dd></div>
+            <div><dt id="statLegacy">4</dt><dd>Beta · Alpha · Indev</dd></div>
+          </dl>
+        </div>
+
+        <div class="hero-card" id="heroCard" tabindex="0" role="button" aria-label="Open featured version">
+          <div class="hero-card-art">
+            <img id="heroImg" alt="" />
+            <span class="tag" id="heroTag">Newest</span>
+          </div>
+          <div class="hero-card-body">
+            <div>
+              <p class="mono muted small">FEATURED</p>
+              <h2 id="heroName">Eaglercraft 26.3</h2>
+              <p class="muted" id="heroDesc"></p>
+            </div>
+            <span class="arrow" aria-hidden="true">→</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Versions -->
+      <section class="versions" id="versions">
+        <div class="section-head">
+          <div>
+            <h2>Versions</h2>
+            <p class="muted">
+              Fetched from <a id="sourceLink" href="https://eaglercraft.com/play" target="_blank" rel="noopener">eaglercraft.com</a>
+              on <time id="sourceDate">2026-11-25</time>.
+            </p>
+          </div>
+          <div class="toolbar">
+            <div class="chips" role="tablist" aria-label="Filter versions">
+              <button class="chip active" data-filter="all" role="tab" aria-selected="true">All</button>
+              <button class="chip" data-filter="modern" role="tab">Modern</button>
+              <button class="chip" data-filter="release" role="tab">Release</button>
+              <button class="chip" data-filter="legacy" role="tab">Beta &amp; Alpha</button>
+              <button class="chip" data-filter="modded" role="tab">Modded</button>
+            </div>
+            <label class="search">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
+              <input id="search" type="search" placeholder="Search versions…" autocomplete="off" />
+              <kbd>/</kbd>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid" id="grid" aria-live="polite"></div>
+        <p class="empty muted" id="empty" hidden>No versions match that search.</p>
+      </section>
+
+      <!-- How it works -->
+      <section class="how" id="how">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-n mono">01</span>
+            <h3>Pick a version</h3>
+            <p class="muted">Pick any version, from Indev and Alpha up to 26.3. Your last pick is saved in this browser.</p>
+          </li>
+          <li>
+            <span class="step-n mono">02</span>
+            <h3>Choose a runtime</h3>
+            <p class="muted">For 1.8.8 and 1.12.2, choose WebAssembly for better frame rates or JavaScript for older devices.</p>
+          </li>
+          <li>
+            <span class="step-n mono">03</span>
+            <h3>Launch</h3>
+            <p class="muted">The game opens on eaglercraft.com in a new tab. Your worlds are stored in that browser.</p>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="brand small-brand">
+        <img src="assets/logo.svg" alt="" width="22" height="22" />
+        <span>Quasoria<em>Launcher</em></span>
+      </div>
+      <p class="muted small">
+        This is a fan-made launcher, not affiliated with Eaglercraft, Mojang or Microsoft. Games are hosted on
+        <a href="https://eaglercraft.com" target="_blank" rel="noopener">eaglercraft.com</a>.
+      </p>
+    </footer>
+
+    <!-- Version detail dialog -->
+    <dialog class="sheet" id="sheet" aria-labelledby="sheetName">
+      <form method="dialog" class="sheet-inner">
+        <button class="close" value="close" aria-label="Close">✕</button>
+        <div class="sheet-art"><img id="sheetImg" alt="" /></div>
+        <div class="sheet-body">
+          <div class="sheet-meta">
+            <span class="pill" id="sheetCat">Release</span>
+            <span class="pill pill-dim mono" id="sheetEra">2015</span>
+          </div>
+          <h2 id="sheetName">Eaglercraft 1.8.8</h2>
+          <p class="muted" id="sheetDesc"></p>
+
+          <fieldset class="runtime" id="runtimeBox">
+            <legend class="mono small muted">RUNTIME</legend>
+            <div class="runtime-opts" id="runtimeOpts"></div>
+          </fieldset>
+
+          <div class="url-row">
+            <code class="mono small" id="sheetUrl">eaglercraft.com/play</code>
+            <button type="button" class="btn btn-ghost btn-sm" id="copyBtn">Copy link</button>
+          </div>
+
+          <div class="sheet-actions">
+            <a class="btn btn-primary btn-lg" id="sheetLaunch" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z"/></svg>
+              Launch game
+            </a>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="data/versions.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
