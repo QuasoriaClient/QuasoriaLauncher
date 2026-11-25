@@ -158,13 +158,32 @@
     return el;
   }
 
-  function renderGrid() {
+  const PAGE = 48;
+  let shown = PAGE;
+  let lastList = [];
+  function renderGrid(keepPage) {
     const list = filtered();
-    $("#grid").replaceChildren(...list.map(card));
+    lastList = list;
+    if (!keepPage) shown = PAGE;
+    $("#grid").replaceChildren(...list.slice(0, shown).map(card));
+    updateMore();
     $("#empty").hidden = list.length > 0;
     const total = list.reduce((n, e) => n + S.mirrorCount(e), 0);
     $("#resultLine").textContent = `${list.length} build${list.length === 1 ? "" : "s"} · ${total} mirror${total === 1 ? "" : "s"}`;
   }
+
+  function updateMore() {
+    const left = lastList.length - shown;
+    $("#moreWrap").hidden = left <= 0;
+    $("#moreBtn").textContent = `Show more (${left} left)`;
+  }
+  $("#moreBtn").addEventListener("click", () => {
+    const grid = $("#grid");
+    const next = lastList.slice(shown, shown + PAGE);
+    next.forEach((e, i) => grid.append(card(e, i)));
+    shown += PAGE;
+    updateMore();
+  });
 
   /* ------------------------------------------------ toolbar wiring */
   const search = $("#search");
@@ -279,17 +298,19 @@
     if (ev.target === sheet) sheet.close();
   });
   $("#sheetLaunch").addEventListener("click", () => {
-    S.ls.set("rt:" + cur.id, curRt);
+    if (cur) S.ls.set("rt:" + cur.id, curRt);
   });
   $("#sheetFav").addEventListener("click", () => {
+    if (!cur) return;
     const on = S.toggleFav(cur.id);
     $("#sheetFav").classList.toggle("on", on);
     $("#sheetFav").setAttribute("aria-pressed", String(on));
     renderSectors();
-    renderGrid();
+    renderGrid(true);
     toast(on ? "Added to favorites" : "Removed from favorites");
   });
   $("#copyBtn").addEventListener("click", async () => {
+    if (!cur) return;
     const url = new URL(`#b/${encodeURIComponent(cur.id)}`, location.href).toString();
     try {
       await navigator.clipboard.writeText(url);

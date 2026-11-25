@@ -18,7 +18,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+html { scroll-behavior: smooth; scroll-padding-top: 80px; overflow-x: hidden; overflow-x: clip; }
 body {
   margin: 0;
   background: var(--bg);
@@ -111,7 +111,9 @@ button, select, input { font: inherit; color: inherit; }
   margin: 0 auto;
   min-height: calc(100vh - 64px);
   padding: clamp(40px, 6vw, 80px) clamp(16px, 4vw, 48px) 60px;
+  overflow-x: clip; /* orbit rings must never widen the page */
 }
+main { overflow-x: clip; }
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -337,6 +339,8 @@ kbd { font-family: var(--mono); font-size: 0.72rem; padding: 2px 6px; border-rad
 .card-play:hover, .card:hover .card-play { background: linear-gradient(135deg, #8b6bff, #ff6ad5); color: #fff; box-shadow: 0 0 20px rgba(255, 106, 213, 0.6); }
 .card-play:hover { transform: scale(1.1); }
 
+.more-wrap { display: flex; justify-content: center; margin-top: 22px; }
+.more-wrap .btn { min-width: 240px; }
 .empty { text-align: center; padding: 70px 0; color: var(--muted); }
 .empty-orb { width: 70px; height: 70px; margin: 0 auto 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #a274ff 30%, transparent 70%); box-shadow: 0 0 60px rgba(162, 116, 255, 0.6); animation: float 4s ease-in-out infinite; }
 @keyframes float { 50% { transform: translateY(-10px); } }
