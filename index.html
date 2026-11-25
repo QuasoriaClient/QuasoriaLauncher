@@ -10,12 +10,7 @@
     />
     <meta name="theme-color" content="#05040f" />
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -60,7 +55,7 @@
           </div>
           <dl class="stats">
             <div><dt id="statEntries">171</dt><dd>unique builds</dd></div>
-            <div><dt id="statMirrors">521</dt><dd>mirrors</dd></div>
+            <div><dt id="statStored">4.05 GB</dt><dd>stored on this site</dd></div>
             <div><dt id="statSources">5</dt><dd>archives merged</dd></div>
           </dl>
         </div>
@@ -92,7 +87,7 @@
             <h2>The Galaxy</h2>
             <p class="muted">
               Every era is a different kind of cosmic object. Duplicate builds across archives are
-              merged into one card, and the extra copies become backup mirrors.
+              merged into one card, and one copy of each is kept right here on this site.
             </p>
           </div>
         </div>
@@ -120,7 +115,7 @@
                 <select id="sort">
                   <option value="era">Sort: Timeline</option>
                   <option value="az">Sort: A → Z</option>
-                  <option value="mirrors">Sort: Most mirrors</option>
+                  <option value="size">Sort: Smallest first</option>
                 </select>
               </label>
             </div>
@@ -140,14 +135,15 @@
       <!-- Sources -->
       <section class="sources" id="sources">
         <p class="kicker mono">OBSERVATORIES</p>
-        <h2>Where the signal comes from</h2>
+        <h2>Where the signal came from</h2>
         <p class="muted narrow">
-          These are the five archives Quasoria merges. Builds served from GitHub Pages load directly.
-          The other builds are streamed from GitHub, cached in your browser, and then booted locally.
+          These are the five archives Quasoria merged. One copy of every build, the smallest one found,
+          is kept in this repository under <code>builds/</code>. Nothing is downloaded from anywhere else
+          when you play.
         </p>
         <div class="source-grid" id="sourceGrid"></div>
         <p class="muted small regen">
-          To regenerate the catalog, run <code>node scripts/build-catalog.mjs</code>. Last charted <time id="genDate"></time>.
+          To refresh, run <code>node scripts/build-catalog.mjs</code>, then <code>node scripts/vendor-builds.mjs</code>. Last charted <time id="genDate"></time>.
         </p>
       </section>
     </main>
@@ -178,15 +174,11 @@
             <button type="button" class="fav-btn" id="sheetFav" aria-pressed="false" aria-label="Favorite">★</button>
           </div>
 
-          <fieldset class="runtime" id="runtimeBox">
-            <legend class="mono small muted">RUNTIME</legend>
-            <div class="runtime-opts" id="runtimeOpts"></div>
-          </fieldset>
-
-          <fieldset class="mirrors">
-            <legend class="mono small muted">MIRROR <span id="mirrorCount"></span></legend>
-            <div class="mirror-list" id="mirrorList"></div>
-          </fieldset>
+          <dl class="facts">
+            <div><dt class="mono small muted">RUNTIME</dt><dd><b id="sheetRuntime">JavaScript</b><small id="sheetRuntimeNote"></small></dd></div>
+            <div><dt class="mono small muted">SIZE</dt><dd><b id="sheetSize" class="mono">0 MB</b><small>Stored on this site</small></dd></div>
+            <div class="wide"><dt class="mono small muted">KEPT FROM</dt><dd><a id="sheetOrigin" target="_blank" rel="noopener"></a><small id="sheetAlso"></small></dd></div>
+          </dl>
 
           <div class="sheet-actions">
             <a class="btn btn-primary btn-lg" id="sheetLaunch">

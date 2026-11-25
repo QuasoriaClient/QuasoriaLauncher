@@ -21,17 +21,10 @@
     },
   };
 
-  const runtimesOf = (e) => ["wasm", "js"].filter((r) => e.runtimes[r]?.length);
-  const mirrorCount = (e) => runtimesOf(e).reduce((n, r) => n + e.runtimes[r].length, 0);
-
-  function preferredRuntime(e) {
-    const saved = ls.get("rt:" + e.id);
-    const avail = runtimesOf(e);
-    if (saved && avail.includes(saved)) return saved;
-    // WASM-GC needs a modern browser; fall back to JS when we can tell it's missing
-    if (avail.includes("wasm") && supportsWasmGC()) return "wasm";
-    return avail.includes("js") ? "js" : avail[0];
-  }
+  // Every build is stored once, in builds/<id>/, with a single runtime.
+  const runtimesOf = (e) => [e.rt];
+  const preferredRuntime = (e) => e.rt;
+  const buildUrl = (e) => e.path;
 
   let _gc;
   function supportsWasmGC() {
@@ -45,30 +38,25 @@
     return _gc;
   }
 
-  function playUrl(e, rt = preferredRuntime(e), m = 0) {
-    const q = new URLSearchParams({ id: e.id, rt });
-    if (m) q.set("m", String(m));
-    return "play.html?" + q.toString();
-  }
+  // Eaglercraft's WASM-GC runtime also needs JSPI (WebAssembly.Suspending):
+  // on by default in Chrome/Edge 137+.
+  const supportsJSPI = () => typeof WebAssembly === "object" && typeof WebAssembly.Suspending === "function";
+  const wasmReady = () => supportsWasmGC() && supportsJSPI();
+
+  const playUrl = (e) => "play.html?id=" + encodeURIComponent(e.id);
 
   function fmtBytes(b) {
     if (!b) return "";
     if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + " KB";
+    if (b >= 1e9) return (b / 1024 / 1024 / 1024).toFixed(2) + " GB";
     return (b / 1024 / 1024).toFixed(b < 10 * 1024 * 1024 ? 1 : 0) + " MB";
   }
 
-  function hostOf(url) {
-    try {
-      return new URL(url).host;
-    } catch {
-      return "";
-    }
-  }
 
   /* recent + favorites */
-  function pushRecent(id, rt) {
+  function pushRecent(id) {
     const list = ls.get("recent", []).filter((r) => r.id !== id);
-    list.unshift({ id, rt, at: Date.now() });
+    list.unshift({ id, at: Date.now() });
     ls.set("recent", list.slice(0, 12));
   }
   const recent = () => ls.get("recent", []).filter((r) => byId.has(r.id));
@@ -81,7 +69,7 @@
   }
 
   window.QStore = {
-    CAT, byId, sourceById, ls, runtimesOf, mirrorCount, preferredRuntime, supportsWasmGC,
-    playUrl, fmtBytes, hostOf, pushRecent, recent, favs, toggleFav,
+    CAT, byId, sourceById, ls, runtimesOf, preferredRuntime, supportsWasmGC, supportsJSPI, wasmReady, buildUrl,
+    playUrl, fmtBytes, pushRecent, recent, favs, toggleFav,
   };
 })();

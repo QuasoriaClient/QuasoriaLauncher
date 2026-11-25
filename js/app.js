@@ -78,8 +78,8 @@
   /* ------------------------------------------------ search / filter / sort */
   function haystack(e) {
     const sec = SECTORS[e.family];
-    const mirrors = S.runtimesOf(e).flatMap((r) => e.runtimes[r].map((m) => sourceById.get(m.s)?.name || ""));
-    return [e.title, e.version, e.family, sec?.name, sec?.label, ...S.runtimesOf(e), ...mirrors].join(" ").toLowerCase();
+    const srcs = [e.from, ...(e.also || [])].map((s) => sourceById.get(s)?.name || s);
+    return [e.title, e.version, e.family, sec?.name, sec?.label, e.rt, ...srcs].join(" ").toLowerCase();
   }
   const HAY = new Map(ENTRIES.map((e) => [e.id, haystack(e)]));
   const ORDER = new Map(ENTRIES.map((e, i) => [e.id, i]));
@@ -89,13 +89,13 @@
     const terms = state.q.toLowerCase().split(/\s+/).filter(Boolean);
     let list = ENTRIES.filter((e) => {
       if (!inSector(e, sec)) return false;
-      if (state.rt !== "any" && !e.runtimes[state.rt]?.length) return false;
+      if (state.rt !== "any" && e.rt !== state.rt) return false;
       if (!terms.length) return true;
       const h = HAY.get(e.id);
       return terms.every((t) => h.includes(t));
     });
     if (state.sort === "az") list = list.slice().sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }));
-    else if (state.sort === "mirrors") list = list.slice().sort((a, b) => S.mirrorCount(b) - S.mirrorCount(a) || ORDER.get(a.id) - ORDER.get(b.id));
+    else if (state.sort === "size") list = list.slice().sort((a, b) => a.size - b.size || ORDER.get(a.id) - ORDER.get(b.id));
     return list;
   }
 
@@ -125,8 +125,6 @@
 
   function card(e, i) {
     const sec = SECTORS[e.family];
-    const rts = S.runtimesOf(e);
-    const mc = S.mirrorCount(e);
     const fav = S.favs().has(e.id);
     const el = document.createElement("article");
     el.className = "card";
@@ -142,8 +140,8 @@
         <h3>${esc(e.title)}</h3>
         <p class="card-sub">${esc(subtitle(e))}</p>
         <div class="card-foot">
-          <span class="rts">${rts.map((r) => `<span class="rt rt-${r}">${r.toUpperCase()}</span>`).join("")}</span>
-          <span class="mc mono" title="${mc} mirror${mc === 1 ? "" : "s"}">${"●".repeat(Math.min(mc, 5))}<i>${mc > 5 ? "+" : ""}</i></span>
+          <span class="rts"><span class="rt rt-${e.rt}">${e.rt.toUpperCase()}</span></span>
+          <span class="sz mono" title="Stored in this site">${S.fmtBytes(e.size)}</span>
         </div>
       </div>
       <button class="card-play" aria-label="Launch ${esc(e.title)}">
@@ -168,8 +166,8 @@
     $("#grid").replaceChildren(...list.slice(0, shown).map(card));
     updateMore();
     $("#empty").hidden = list.length > 0;
-    const total = list.reduce((n, e) => n + S.mirrorCount(e), 0);
-    $("#resultLine").textContent = `${list.length} build${list.length === 1 ? "" : "s"} · ${total} mirror${total === 1 ? "" : "s"}`;
+    const total = list.reduce((n, e) => n + e.size, 0);
+    $("#resultLine").textContent = `${list.length} build${list.length === 1 ? "" : "s"} · ${S.fmtBytes(total)} stored`;
   }
 
   function updateMore() {
@@ -221,42 +219,8 @@
   /* ------------------------------------------------ detail sheet */
   const sheet = $("#sheet");
   let cur = null;
-  let curRt = null;
-  let curMirror = 0;
-
-  function renderMirrors() {
-    const list = cur.runtimes[curRt] || [];
-    $("#mirrorCount").textContent = `· ${list.length}`;
-    $("#mirrorList").replaceChildren(
-      ...list.map((m, i) => {
-        const src = sourceById.get(m.s);
-        const l = document.createElement("label");
-        l.className = "mirror";
-        l.innerHTML = `<input type="radio" name="mirror" ${i === curMirror ? "checked" : ""} />
-          <span class="mirror-card">
-            <span class="mirror-main"><b>${esc(src?.name || m.s)}</b><small class="mono">${esc(S.hostOf(m.u))}</small></span>
-            <span class="mirror-meta">
-              <span class="tag-kind ${m.k}">${m.k === "page" ? "Direct" : "Streamed"}</span>
-              <small class="mono">${S.fmtBytes(m.b)}</small>
-            </span>
-          </span>`;
-        $("input", l).onchange = () => {
-          curMirror = i;
-          updateLaunch();
-        };
-        return l;
-      }),
-    );
-  }
-
-  function updateLaunch() {
-    $("#sheetLaunch").href = S.playUrl(cur, curRt, curMirror);
-  }
-
   function openSheet(e) {
     cur = e;
-    curRt = S.preferredRuntime(e);
-    curMirror = 0;
     const sec = SECTORS[e.family];
     paint($("#sheetArt"), e);
     $("#sheetName").textContent = e.title;
@@ -266,27 +230,19 @@
     $("#sheetFav").classList.toggle("on", fav);
     $("#sheetFav").setAttribute("aria-pressed", String(fav));
 
-    const rts = S.runtimesOf(e);
-    $("#runtimeBox").hidden = rts.length < 2;
-    $("#runtimeOpts").replaceChildren(
-      ...rts.map((r) => {
-        const l = document.createElement("label");
-        l.className = "rt-opt";
-        const n = e.runtimes[r].length;
-        l.innerHTML = `<input type="radio" name="runtime" value="${r}" ${r === curRt ? "checked" : ""} />
-          <span><b>${r === "wasm" ? "WebAssembly" : "JavaScript"}</b><small>${r === "wasm" ? "Faster · needs a modern browser" : "Most compatible"} · ${n} mirror${n === 1 ? "" : "s"}</small></span>`;
-        $("input", l).onchange = () => {
-          curRt = r;
-          curMirror = 0;
-          S.ls.set("rt:" + e.id, r);
-          renderMirrors();
-          updateLaunch();
-        };
-        return l;
-      }),
-    );
-    renderMirrors();
-    updateLaunch();
+    const src = sourceById.get(e.from);
+    const wasm = e.rt === "wasm";
+    $("#sheetRuntime").textContent = wasm ? "WebAssembly" : "JavaScript";
+    $("#sheetRuntimeNote").textContent = wasm
+      ? S.wasmReady() ? "Faster · your browser supports it" : "Needs Chrome or Edge 137+ (WASM-GC + JSPI)"
+      : "Works in any modern browser";
+    $("#sheetSize").textContent = S.fmtBytes(e.size);
+    const origin = $("#sheetOrigin");
+    origin.textContent = src?.name || e.from;
+    origin.href = `https://github.com/${src?.repo || ""}`;
+    const also = (e.also || []).map((s) => sourceById.get(s)?.name || s);
+    $("#sheetAlso").textContent = also.length ? `Also archived by ${also.join(", ")}` : "Only found in this archive";
+    $("#sheetLaunch").href = S.playUrl(e);
     if (!sheet.open) sheet.showModal();
     history.replaceState(null, "", `#b/${encodeURIComponent(e.id)}`);
   }
@@ -296,9 +252,6 @@
   });
   sheet.addEventListener("click", (ev) => {
     if (ev.target === sheet) sheet.close();
-  });
-  $("#sheetLaunch").addEventListener("click", () => {
-    if (cur) S.ls.set("rt:" + cur.id, curRt);
   });
   $("#sheetFav").addEventListener("click", () => {
     if (!cur) return;
@@ -321,8 +274,8 @@
   });
 
   /* ------------------------------------------------ launch / recent */
-  function launch(e, rt) {
-    location.href = S.playUrl(e, rt || S.preferredRuntime(e));
+  function launch(e) {
+    location.href = S.playUrl(e);
   }
 
   function renderRecent() {
@@ -333,8 +286,8 @@
         const e = byId.get(r.id);
         const a = document.createElement("a");
         a.className = "chip-card";
-        a.href = S.playUrl(e, r.rt);
-        a.innerHTML = `<canvas width="96" height="54"></canvas><span><b>${esc(e.title)}</b><small class="mono">${(r.rt || "").toUpperCase()} · ${timeAgo(r.at)}</small></span>`;
+        a.href = S.playUrl(e);
+        a.innerHTML = `<canvas width="96" height="54"></canvas><span><b>${esc(e.title)}</b><small class="mono">${e.rt.toUpperCase()} · ${timeAgo(r.at)}</small></span>`;
         paint($("canvas", a), e);
         return a;
       }),
@@ -344,11 +297,11 @@
     nav.hidden = !last;
     if (last) {
       $("#navContinueLabel").textContent = `Continue ${last.title}`;
-      nav.onclick = () => launch(last, rec[0].rt);
+      nav.onclick = () => launch(last);
     }
     const target = last || byId.get("release-1.8.8") || ENTRIES[0];
     $("#heroLaunchLabel").textContent = last ? `Continue ${target.title}` : `Launch ${target.title}`;
-    $("#heroLaunch").onclick = () => launch(target, last ? rec[0].rt : undefined);
+    $("#heroLaunch").onclick = () => launch(target);
   }
   $("#clearRecent").onclick = () => {
     S.ls.set("recent", []);
@@ -376,26 +329,21 @@
 
   /* ------------------------------------------------ sources */
   function renderSources() {
+    // stored = the copy kept in builds/ came from this archive; listed = it had the build at all
     const counts = {};
     for (const e of ENTRIES)
-      for (const r of S.runtimesOf(e))
-        for (const m of e.runtimes[r]) {
-          counts[m.s] ||= { builds: 0, unique: new Set() };
-          counts[m.s].builds++;
-          counts[m.s].unique.add(e.id);
+      for (const sid of [e.from, ...(e.also || [])]) {
+        counts[sid] ||= { listed: 0, stored: 0, bytes: 0, exclusive: 0 };
+        counts[sid].listed++;
+        if (sid === e.from) {
+          counts[sid].stored++;
+          counts[sid].bytes += e.size;
+          if (!(e.also || []).length) counts[sid].exclusive++;
         }
-    // builds that exist only in this source
-    const exclusive = {};
-    for (const e of ENTRIES) {
-      const srcs = new Set(S.runtimesOf(e).flatMap((r) => e.runtimes[r].map((m) => m.s)));
-      if (srcs.size === 1) {
-        const s = [...srcs][0];
-        exclusive[s] = (exclusive[s] || 0) + 1;
       }
-    }
     $("#sourceGrid").replaceChildren(
       ...CAT.sources.map((s, i) => {
-        const c = counts[s.id] || { builds: 0, unique: new Set() };
+        const c = counts[s.id] || { listed: 0, stored: 0, bytes: 0, exclusive: 0 };
         const a = document.createElement("a");
         a.className = "source";
         a.href = `https://github.com/${s.repo}`;
@@ -407,9 +355,10 @@
             <b>${esc(s.name)}</b>
             <small class="mono">${esc(s.repo)}</small>
             <span class="source-stats">
-              <span><i class="mono">${c.builds}</i> builds</span>
-              <span><i class="mono">${exclusive[s.id] || 0}</i> exclusive</span>
-              <span class="tag-kind ${s.pages ? "page" : "raw"}">${s.pages ? "Direct" : "Streamed"}</span>
+              <span><i class="mono">${c.listed}</i> builds</span>
+              <span><i class="mono">${c.stored}</i> kept</span>
+              <span><i class="mono">${c.exclusive}</i> exclusive</span>
+              <span class="tag-kind page">${S.fmtBytes(c.bytes) || "0 MB"}</span>
             </span>
           </span>`;
         return a;
@@ -432,7 +381,7 @@
   function stats() {
     $("#heroCount").textContent = ENTRIES.length;
     $("#statEntries").textContent = ENTRIES.length;
-    $("#statMirrors").textContent = CAT.stats.builds;
+    $("#statStored").textContent = S.fmtBytes(CAT.stats.bytes);
     $("#statSources").textContent = CAT.sources.length;
   }
 

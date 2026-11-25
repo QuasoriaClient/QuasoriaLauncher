@@ -1,18 +1,18 @@
 # Quasoria Launcher
 
-A launcher website for every Eaglercraft build in the known universe. It merges five community archives into one catalog with no duplicates, and plays each build right in your browser.
+A launcher website for every Eaglercraft build in the known universe. It merges five community archives into one catalog with no duplicates, and **keeps one copy of every build inside this repository** (`builds/`). Nothing is fetched from other sites when you play.
 
-**171 unique builds · 521 mirrors · 5 archives.** The catalog runs from Pre-Classic `rd-131655` through Classic, Indev, Alpha, Beta and Release 1.0–1.21.11 up to 26.3, plus 83 clients, 16 Forge/modpack builds and a few oddities.
+**171 unique builds · 4.49 GB stored · 5 archives merged.** The catalog runs from Pre-Classic `rd-131655` through Classic, Indev, Alpha, Beta and Release 1.0–1.21.11 up to 26.3, plus 83 clients, 16 Forge/modpack builds and a few oddities.
 
 ## Sources
 
-| Archive | Hosting | Builds |
+| Archive | Builds listed | Copies kept here |
 | --- | --- | --- |
-| [XENOTECH-X/GX-Launcher](https://github.com/XENOTECH-X/GX-Launcher) (GX Launcher) | GitHub Pages: direct | 116 |
-| [GX-Launcher-V1/GX-Launcher-V1.github.io](https://github.com/GX-Launcher-V1/GX-Launcher-V1.github.io) | GitHub Pages: direct | 43 |
-| [TheCookeringYT/Play](https://github.com/TheCookeringYT/Play) | GitHub Pages: direct | 103 |
-| [UserArham/version](https://github.com/UserArham/version) | raw GitHub: streamed | 138 |
-| [MilkdromedaStudios/all-of-eaglercraft](https://github.com/MilkdromedaStudios/all-of-eaglercraft) | raw GitHub: streamed | 121 |
+| [XENOTECH-X/GX-Launcher](https://github.com/XENOTECH-X/GX-Launcher) (GX Launcher) | 116 | 61 |
+| [GX-Launcher-V1/GX-Launcher-V1.github.io](https://github.com/GX-Launcher-V1/GX-Launcher-V1.github.io) | 43 | 6 |
+| [TheCookeringYT/Play](https://github.com/TheCookeringYT/Play) | 103 | 33 |
+| [UserArham/version](https://github.com/UserArham/version) | 138 | 11 |
+| [MilkdromedaStudios/all-of-eaglercraft](https://github.com/MilkdromedaStudios/all-of-eaglercraft) | 121 | 60 |
 
 ### How deduplication works
 
@@ -23,20 +23,34 @@ A launcher website for every Eaglercraft build in the known universe. It merges 
 - `EaglercraftX 1.8 EN/Intl/WASM`, `Eaglercraft-1.8.8.html` and so on all become **1.8.8**.
 - When several archives contain byte-identical files (same git SHA), they share one runtime, even if a filename says otherwise.
 
-Each identity becomes **one card**. Every copy across the archives becomes a **mirror** of that card. Mirrors are ordered so the Pages-hosted (fastest) copies come first. The script has a small override table for filenames the rules can't parse.
+Each identity becomes **one card**. The script has a small override table for filenames the rules can't parse. It writes every copy it found to `data/mirrors.json`. The website doesn't use that file; it only feeds the next step.
+
+### How builds are kept
+
+`scripts/vendor-builds.mjs` picks **one copy per card**: a JavaScript build when one exists (it runs in every browser), otherwise the smallest file. It then copies that build into `builds/<id>/`:
+
+- Single-file builds are saved as `builds/<id>/index.html`.
+- Multi-file builds (GX folders with `classes.js`, `assets.epk`, `.wasm` and so on) are copied whole.
+- `builds/<id>/.source.json` records which repo and path each copy came from.
+- Files are pulled with partial git clones that fetch only the needed blobs. Every file was checked byte-for-byte against GitHub's tree sizes.
+- A few builds had analytics beacons or a CDN-hosted debug console. Those `<script>` tags are stripped, or pointed at `assets/vendor/`, so no build calls out to another host. The `PATCHES` list in the script shows exactly what was changed.
+- The runtime label comes from each build's own `<title>` (for example "... WASM-GC"), because archive file names are not always right.
+
+It then writes `data/catalog.js`, which lists only the local copies.
 
 ```sh
-GITHUB_TOKEN=$(gh auth token) node scripts/build-catalog.mjs --dump
+GITHUB_TOKEN=$(gh auth token) node scripts/build-catalog.mjs --dump   # 1. merge the archives -> data/mirrors.json
+node scripts/vendor-builds.mjs --plan                                 # 2a. preview what will be kept
+node scripts/vendor-builds.mjs                                        # 2b. download anything missing -> builds/, data/catalog.js
 ```
 
-This regenerates `data/catalog.js` (`--dump` also prints the merged table).
+GitHub's 100 MB per-file limit is never hit: the largest kept file is Chromium Client 26.2 at 100,391,663 bytes, which is under GitHub's 104,857,600-byte cap.
 
 ## How playing works (`play.html`)
 
-- **Direct** mirrors (GitHub Pages) are embedded in an iframe.
-- **Streamed** mirrors are fetched from `raw.githubusercontent.com` with a live progress bar. They're stored with the Cache API, so the next launch is instant, and then booted from a same-origin `blob:` URL, so your worlds persist in this site's storage.
-- If a streamed mirror fails, the player moves on to the next mirror, and then to the other runtime.
-- The top bar hides itself while you play. It has controls to switch runtime or mirror, go fullscreen, and open the build in a new tab.
+- The player opens `builds/<id>/` in an iframe on the same origin as the launcher. Worlds and settings are saved in this site's storage.
+- WASM-GC builds need **Chrome or Edge 137+** (WebAssembly GC + JSPI). The launcher detects this and warns on older browsers. JS builds run anywhere.
+- The top bar hides itself while you play. It has reload, fullscreen and open-in-new-tab controls.
 
 ## The cosmos
 
@@ -60,10 +74,10 @@ Quasoria is a play on *quasar*, so the whole site is set in space:
 
 ## Features
 
-- Sector sidebar, search (press `/`), a WASM/JS filter, and sorting (timeline, A–Z, most mirrors)
-- A detail sheet for each build with a runtime picker, mirror list (host, size, direct or streamed) and share link (`#b/<id>`)
+- Sector sidebar, search (press `/`), a WASM/JS filter, sorting (timeline, A–Z, smallest first), and 48 cards per page with "Show more"
+- A detail sheet for each build showing its runtime, stored size, which archive the copy came from (and which others had it), plus a share link (`#b/<id>`)
 - Favorites, a "recent transmissions" rail, and a "Continue" button (stored in localStorage)
-- Picks WASM by default when the browser supports WebAssembly GC, and falls back to JS otherwise
+- Self-hosted fonts (`assets/fonts/`, from @fontsource), so the site makes no outside requests
 - No build step: plain HTML, CSS and JS
 
 ## Run locally
@@ -72,7 +86,9 @@ Quasoria is a play on *quasar*, so the whole site is set in space:
 python3 -m http.server 8080
 ```
 
-Then open http://localhost:8080. Streamed builds and the Cache API need `http://localhost` or HTTPS.
+Then open http://localhost:8080. Use a server rather than opening the file directly, because some builds load their `classes.js` and `assets.epk` with requests that browsers block on `file://`.
+
+> **Hosting note:** the full site is about 4.5 GB. GitHub Pages only publishes sites up to 1 GB, so host it somewhere without that cap (your own server, Cloudflare R2 + Pages, Netlify with large media, etc.). Cloning the repo also downloads every build.
 
 ---
 

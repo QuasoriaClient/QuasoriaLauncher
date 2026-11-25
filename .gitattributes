@@ -1,0 +1,3 @@
+# Stored game builds: never diff them, and keep them out of GitHub language stats
+builds/** -diff linguist-vendored
+assets/vendor/** linguist-vendored
