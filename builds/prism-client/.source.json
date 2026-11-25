@@ -1,0 +1,9 @@
+{
+  "repo": "UserArham/version",
+  "path": "Prism-Client.html",
+  "source": "arham",
+  "runtime": "js",
+  "patched": [
+    "strip GA4 analytics script"
+  ]
+}
