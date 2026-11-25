@@ -1,0 +1,9 @@
+{
+  "repo": "MilkdromedaStudios/all-of-eaglercraft",
+  "path": "EaglerCreate fast WASM.html",
+  "source": "milkdromeda",
+  "runtime": "wasm",
+  "patched": [
+    "use local eruda (debug console) instead of jsDelivr"
+  ]
+}
