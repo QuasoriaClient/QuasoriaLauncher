@@ -1,0 +1,6 @@
+{
+  "repo": "XENOTECH-X/GX-Launcher",
+  "path": "game/1.20.6-wasm",
+  "source": "gx",
+  "runtime": "wasm"
+}

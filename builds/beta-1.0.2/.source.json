@@ -1,0 +1,6 @@
+{
+  "repo": "XENOTECH-X/GX-Launcher",
+  "path": "game/beta-1.0.2",
+  "source": "gx",
+  "runtime": "wasm"
+}
