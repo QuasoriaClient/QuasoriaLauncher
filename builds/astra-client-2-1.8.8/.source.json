@@ -1,0 +1,9 @@
+{
+  "repo": "XENOTECH-X/GX-Launcher",
+  "path": "game/Astra Client 2-1.8.8",
+  "source": "gx",
+  "runtime": "js",
+  "patched": [
+    "strip Cloudflare analytics beacon"
+  ]
+}

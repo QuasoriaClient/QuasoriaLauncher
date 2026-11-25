@@ -1,0 +1,9 @@
+{
+  "repo": "MilkdromedaStudios/all-of-eaglercraft",
+  "path": "Best Hacked Minecraft No AI.html",
+  "source": "milkdromeda",
+  "runtime": "js",
+  "patched": [
+    "strip Cloudflare analytics beacon"
+  ]
+}
