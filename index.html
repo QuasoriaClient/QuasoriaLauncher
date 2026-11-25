@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quasoria Launcher: every Eaglercraft version in one place</title>
+    <title>Quasoria Launcher: every Eaglercraft build in the known universe</title>
     <meta
       name="description"
-      content="Quasoria Launcher lists every Eaglercraft version, from Indev to 26.3, so you can start any of them in your browser in one click."
+      content="Quasoria merges every Eaglercraft build from five community archives into one deduplicated catalog, from Pre-Classic rd-131655 to 26.3, plus clients and modpacks. Pick one and play it in your browser."
     />
-    <meta name="theme-color" content="#0b0a14" />
+    <meta name="theme-color" content="#05040f" />
     <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,7 +19,8 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="sky" aria-hidden="true"></div>
+    <canvas id="cosmos" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
 
     <header class="nav">
       <a class="brand" href="#top" aria-label="Quasoria Launcher home">
@@ -27,8 +28,8 @@
         <span>Quasoria<em>Launcher</em></span>
       </a>
       <nav class="nav-links">
-        <a href="#versions">Versions</a>
-        <a href="#how">How it works</a>
+        <a href="#galaxy">Galaxy</a>
+        <a href="#sources">Sources</a>
         <a href="https://github.com/QuasoriaClient/QuasoriaLauncher" target="_blank" rel="noopener">GitHub</a>
       </nav>
       <button class="btn btn-ghost nav-continue" id="navContinue" hidden>
@@ -40,92 +41,111 @@
       <!-- Hero -->
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="pulse"></span><span id="versionCount">10</span> versions, one launcher</p>
-          <h1>Every Eaglercraft version.<br /><span class="grad">One click away.</span></h1>
+          <p class="eyebrow"><span class="pulse"></span>Signal acquired · <span id="heroCount">171</span> worlds charted</p>
+          <h1>
+            Every Eaglercraft build<br />
+            <span class="grad">in the known universe.</span>
+          </h1>
           <p class="lede">
-            Quasoria collects every version on eaglercraft.com, from the 2009 Indev build to 26.3,
-            and starts any of them straight in your browser. You don't install or download anything.
+            Quasoria merges five community archives into one catalog with no duplicates. It covers
+            Pre-Classic rd-131655 through 26.3, plus every client, modpack and oddity in between.
+            Pick a version and it opens right here in your browser.
           </p>
           <div class="hero-actions">
             <button class="btn btn-primary btn-lg" id="heroLaunch">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z"/></svg>
-              <span id="heroLaunchLabel">Play 1.8.8</span>
+              <span id="heroLaunchLabel">Launch 1.8.8</span>
             </button>
-            <a class="btn btn-ghost btn-lg" href="#versions">Browse versions</a>
+            <a class="btn btn-ghost btn-lg" href="#galaxy">Explore the galaxy</a>
           </div>
           <dl class="stats">
-            <div><dt id="statModern">2</dt><dd>Modern</dd></div>
-            <div><dt id="statRelease">3</dt><dd>Release</dd></div>
-            <div><dt id="statLegacy">4</dt><dd>Beta · Alpha · Indev</dd></div>
+            <div><dt id="statEntries">171</dt><dd>unique builds</dd></div>
+            <div><dt id="statMirrors">521</dt><dd>mirrors</dd></div>
+            <div><dt id="statSources">5</dt><dd>archives merged</dd></div>
           </dl>
         </div>
 
-        <div class="hero-card" id="heroCard" tabindex="0" role="button" aria-label="Open featured version">
-          <div class="hero-card-art">
-            <img id="heroImg" alt="" />
-            <span class="tag" id="heroTag">Newest</span>
+        <div class="quasar-stage" data-quasar-anchor aria-hidden="false">
+          <div class="orbits">
+            <div class="orbit orbit-1"><button class="satellite" data-sat="0"></button></div>
+            <div class="orbit orbit-2"><button class="satellite" data-sat="1"></button></div>
+            <div class="orbit orbit-3"><button class="satellite" data-sat="2"></button></div>
           </div>
-          <div class="hero-card-body">
-            <div>
-              <p class="mono muted small">FEATURED</p>
-              <h2 id="heroName">Eaglercraft 26.3</h2>
-              <p class="muted" id="heroDesc"></p>
-            </div>
-            <span class="arrow" aria-hidden="true">→</span>
-          </div>
+          <p class="stage-caption mono">QSO J1.8.8+26.3 · live</p>
         </div>
       </section>
 
-      <!-- Versions -->
-      <section class="versions" id="versions">
+      <!-- Recently played -->
+      <section class="rail-wrap" id="recentWrap" hidden>
+        <div class="rail-head">
+          <h2 class="h-sm">Recent transmissions</h2>
+          <button class="link-btn" id="clearRecent">Clear</button>
+        </div>
+        <div class="rail" id="recentRail"></div>
+      </section>
+
+      <!-- Galaxy explorer -->
+      <section class="galaxy" id="galaxy">
         <div class="section-head">
           <div>
-            <h2>Versions</h2>
+            <p class="kicker mono">STAR MAP</p>
+            <h2>The Galaxy</h2>
             <p class="muted">
-              Fetched from <a id="sourceLink" href="https://eaglercraft.com/play" target="_blank" rel="noopener">eaglercraft.com</a>
-              on <time id="sourceDate">2026-11-25</time>.
+              Every era is a different kind of cosmic object. Duplicate builds across archives are
+              merged into one card, and the extra copies become backup mirrors.
             </p>
-          </div>
-          <div class="toolbar">
-            <div class="chips" role="tablist" aria-label="Filter versions">
-              <button class="chip active" data-filter="all" role="tab" aria-selected="true">All</button>
-              <button class="chip" data-filter="modern" role="tab">Modern</button>
-              <button class="chip" data-filter="release" role="tab">Release</button>
-              <button class="chip" data-filter="legacy" role="tab">Beta &amp; Alpha</button>
-              <button class="chip" data-filter="modded" role="tab">Modded</button>
-            </div>
-            <label class="search">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
-              <input id="search" type="search" placeholder="Search versions…" autocomplete="off" />
-              <kbd>/</kbd>
-            </label>
           </div>
         </div>
 
-        <div class="grid" id="grid" aria-live="polite"></div>
-        <p class="empty muted" id="empty" hidden>No versions match that search.</p>
+        <div class="galaxy-layout">
+          <aside class="sectors" aria-label="Sectors">
+            <p class="mono small muted sectors-title">SECTORS</p>
+            <div id="sectorList" class="sector-list" role="tablist"></div>
+          </aside>
+
+          <div class="galaxy-main">
+            <div class="toolbar">
+              <label class="search">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m21 21-4.3-4.3M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg>
+                <input id="search" type="search" placeholder="Search 171 builds… (e.g. beta 1.7, astra, wasm)" autocomplete="off" />
+                <kbd>/</kbd>
+              </label>
+              <div class="seg" role="radiogroup" aria-label="Runtime">
+                <button class="seg-btn active" data-rt="any" role="radio" aria-checked="true">Any</button>
+                <button class="seg-btn" data-rt="wasm" role="radio" aria-checked="false">WASM</button>
+                <button class="seg-btn" data-rt="js" role="radio" aria-checked="false">JS</button>
+              </div>
+              <label class="select">
+                <span class="sr-only">Sort</span>
+                <select id="sort">
+                  <option value="era">Sort: Timeline</option>
+                  <option value="az">Sort: A → Z</option>
+                  <option value="mirrors">Sort: Most mirrors</option>
+                </select>
+              </label>
+            </div>
+            <p class="result-line mono small muted" id="resultLine"></p>
+            <div class="grid" id="grid" aria-live="polite"></div>
+            <div class="empty" id="empty" hidden>
+              <div class="empty-orb"></div>
+              <p>Nothing in this region of space. Try another search.</p>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <!-- How it works -->
-      <section class="how" id="how">
-        <h2>How it works</h2>
-        <ol class="steps">
-          <li>
-            <span class="step-n mono">01</span>
-            <h3>Pick a version</h3>
-            <p class="muted">Pick any version, from Indev and Alpha up to 26.3. Your last pick is saved in this browser.</p>
-          </li>
-          <li>
-            <span class="step-n mono">02</span>
-            <h3>Choose a runtime</h3>
-            <p class="muted">For 1.8.8 and 1.12.2, choose WebAssembly for better frame rates or JavaScript for older devices.</p>
-          </li>
-          <li>
-            <span class="step-n mono">03</span>
-            <h3>Launch</h3>
-            <p class="muted">The game opens on eaglercraft.com in a new tab. Your worlds are stored in that browser.</p>
-          </li>
-        </ol>
+      <!-- Sources -->
+      <section class="sources" id="sources">
+        <p class="kicker mono">OBSERVATORIES</p>
+        <h2>Where the signal comes from</h2>
+        <p class="muted narrow">
+          These are the five archives Quasoria merges. Builds served from GitHub Pages load directly.
+          The other builds are streamed from GitHub, cached in your browser, and then booted locally.
+        </p>
+        <div class="source-grid" id="sourceGrid"></div>
+        <p class="muted small regen">
+          To regenerate the catalog, run <code>node scripts/build-catalog.mjs</code>. Last charted <time id="genDate"></time>.
+        </p>
       </section>
     </main>
 
@@ -135,39 +155,42 @@
         <span>Quasoria<em>Launcher</em></span>
       </div>
       <p class="muted small">
-        This is a fan-made launcher, not affiliated with Eaglercraft, Mojang or Microsoft. Games are hosted on
-        <a href="https://eaglercraft.com" target="_blank" rel="noopener">eaglercraft.com</a>.
+        This is a fan-made launcher, not affiliated with Mojang or Microsoft. All builds belong to their
+        respective authors and archive maintainers.
       </p>
     </footer>
 
-    <!-- Version detail dialog -->
+    <!-- Detail dialog -->
     <dialog class="sheet" id="sheet" aria-labelledby="sheetName">
       <form method="dialog" class="sheet-inner">
         <button class="close" value="close" aria-label="Close">✕</button>
-        <div class="sheet-art"><img id="sheetImg" alt="" /></div>
+        <div class="sheet-art"><canvas id="sheetArt" width="640" height="300"></canvas></div>
         <div class="sheet-body">
           <div class="sheet-meta">
-            <span class="pill" id="sheetCat">Release</span>
-            <span class="pill pill-dim mono" id="sheetEra">2015</span>
+            <span class="pill" id="sheetSector">Spiral Galaxies</span>
+            <span class="pill pill-dim mono" id="sheetFamily">Release</span>
           </div>
-          <h2 id="sheetName">Eaglercraft 1.8.8</h2>
-          <p class="muted" id="sheetDesc"></p>
+          <div class="sheet-title-row">
+            <h2 id="sheetName">1.8.8</h2>
+            <button type="button" class="fav-btn" id="sheetFav" aria-pressed="false" aria-label="Favorite">★</button>
+          </div>
 
           <fieldset class="runtime" id="runtimeBox">
             <legend class="mono small muted">RUNTIME</legend>
             <div class="runtime-opts" id="runtimeOpts"></div>
           </fieldset>
 
-          <div class="url-row">
-            <code class="mono small" id="sheetUrl">eaglercraft.com/play</code>
-            <button type="button" class="btn btn-ghost btn-sm" id="copyBtn">Copy link</button>
-          </div>
+          <fieldset class="mirrors">
+            <legend class="mono small muted">MIRROR <span id="mirrorCount"></span></legend>
+            <div class="mirror-list" id="mirrorList"></div>
+          </fieldset>
 
           <div class="sheet-actions">
-            <a class="btn btn-primary btn-lg" id="sheetLaunch" target="_blank" rel="noopener">
+            <a class="btn btn-primary btn-lg" id="sheetLaunch">
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11-6.86a1 1 0 0 0 0-1.72l-11-6.86A1 1 0 0 0 8 5.14Z"/></svg>
-              Launch game
+              Launch
             </a>
+            <button type="button" class="btn btn-ghost btn-lg" id="copyBtn" title="Copy share link">Share</button>
           </div>
         </div>
       </form>
@@ -175,7 +198,11 @@
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="data/versions.js"></script>
-    <script src="app.js"></script>
+    <script src="data/catalog.js"></script>
+    <script src="js/noise.js"></script>
+    <script src="js/thumbs.js"></script>
+    <script src="js/cosmos.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/app.js"></script>
   </body>
 </html>
