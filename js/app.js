@@ -78,8 +78,8 @@
   /* ------------------------------------------------ search / filter / sort */
   function haystack(e) {
     const sec = SECTORS[e.family];
-    const srcs = [e.from, ...(e.also || [])].map((s) => sourceById.get(s)?.name || s);
-    return [e.title, e.version, e.family, sec?.name, sec?.label, e.rt, ...srcs].join(" ").toLowerCase();
+    const src = sourceById.get(e.from)?.name || e.from;
+    return [e.title, e.version, e.family, sec?.name, sec?.label, e.rt, src].join(" ").toLowerCase();
   }
   const HAY = new Map(ENTRIES.map((e) => [e.id, haystack(e)]));
   const ORDER = new Map(ENTRIES.map((e, i) => [e.id, i]));
@@ -240,8 +240,7 @@
     const origin = $("#sheetOrigin");
     origin.textContent = src?.name || e.from;
     origin.href = `https://github.com/${src?.repo || ""}`;
-    const also = (e.also || []).map((s) => sourceById.get(s)?.name || s);
-    $("#sheetAlso").textContent = also.length ? `Also archived by ${also.join(", ")}` : "Only found in this archive";
+    $("#sheetRepo").textContent = src?.repo || "";
     $("#sheetLaunch").href = S.playUrl(e);
     if (!sheet.open) sheet.showModal();
     history.replaceState(null, "", `#b/${encodeURIComponent(e.id)}`);
@@ -329,21 +328,16 @@
 
   /* ------------------------------------------------ sources */
   function renderSources() {
-    // stored = the copy kept in builds/ came from this archive; listed = it had the build at all
+    // how many of the stored builds were taken from each archive
     const counts = {};
-    for (const e of ENTRIES)
-      for (const sid of [e.from, ...(e.also || [])]) {
-        counts[sid] ||= { listed: 0, stored: 0, bytes: 0, exclusive: 0 };
-        counts[sid].listed++;
-        if (sid === e.from) {
-          counts[sid].stored++;
-          counts[sid].bytes += e.size;
-          if (!(e.also || []).length) counts[sid].exclusive++;
-        }
-      }
+    for (const e of ENTRIES) {
+      const c = (counts[e.from] ||= { stored: 0, bytes: 0 });
+      c.stored++;
+      c.bytes += e.size;
+    }
     $("#sourceGrid").replaceChildren(
       ...CAT.sources.map((s, i) => {
-        const c = counts[s.id] || { listed: 0, stored: 0, bytes: 0, exclusive: 0 };
+        const c = counts[s.id] || { stored: 0, bytes: 0 };
         const a = document.createElement("a");
         a.className = "source";
         a.href = `https://github.com/${s.repo}`;
@@ -355,9 +349,7 @@
             <b>${esc(s.name)}</b>
             <small class="mono">${esc(s.repo)}</small>
             <span class="source-stats">
-              <span><i class="mono">${c.listed}</i> builds</span>
-              <span><i class="mono">${c.stored}</i> kept</span>
-              <span><i class="mono">${c.exclusive}</i> exclusive</span>
+              <span><i class="mono">${c.stored}</i> builds kept</span>
               <span class="tag-kind page">${S.fmtBytes(c.bytes) || "0 MB"}</span>
             </span>
           </span>`;

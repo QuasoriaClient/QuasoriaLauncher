@@ -4,20 +4,21 @@
  *
  * Pulls the file trees of every source repo from the GitHub API, classifies each
  * build (version / era / runtime / client), merges duplicates across repos into one
- * entry with several mirrors, and writes data/mirrors.json.
- * Then run scripts/vendor-builds.mjs to store the builds and write data/catalog.js.
+ * entry, and writes a temporary archive index (in the OS temp dir, never in the repo).
+ * Then run scripts/vendor-builds.mjs to store one copy of each build and write data/catalog.js.
  *
  *   node scripts/build-catalog.mjs            # uses GITHUB_TOKEN if set
  *   GITHUB_TOKEN=$(gh auth token) node scripts/build-catalog.mjs
  */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /* ------------------------------------------------------------------ sources */
-// Order = mirror priority. Pages-hosted sources come first: they load straight from a
+// Order = source priority. Pages-hosted sources come first: they load straight from a
 // CDN, and multi-file builds only work there.
 const SOURCES = [
   {
@@ -510,11 +511,11 @@ for (const it of all) {
   }
   const list = (g.runtimes[c.runtime] ||= []);
   // same sha already present under this runtime: an exact duplicate, keep the earlier
-  // (higher priority) mirror but remember the extra host as a fallback
+  // (higher priority) copy first; vendor-builds.mjs keeps only one of them
   list.push({ s: it.source, u: it.url, k: it.kind, b: it.size, label: it.label, sha: it.sha });
 }
 
-// tidy: order mirrors by source priority, remove same-url dupes, final shape
+// tidy: order copies by source priority, remove same-url dupes, final shape
 const prio = Object.fromEntries(SOURCES.map((s, i) => [s.id, i]));
 const entries = [];
 for (const g of groups.values()) {
@@ -557,12 +558,12 @@ const out = {
   entries,
 };
 
-mkdirSync(join(ROOT, "data"), { recursive: true });
-// Full mirror index (every copy in every archive). The website does not read this;
-// scripts/vendor-builds.mjs uses it to pick one copy per build and store it in builds/.
-writeFileSync(join(ROOT, "data/mirrors.json"), JSON.stringify(out) + "\n");
+// Temporary archive index for scripts/vendor-builds.mjs. It lives outside the repo:
+// the site only ships the one stored copy of each build.
+export const INDEX = process.env.QUASORIA_INDEX || join(tmpdir(), "quasoria-index.json");
+writeFileSync(INDEX, JSON.stringify(out) + "\n");
 process.stderr.write(
-  `\n${all.length} files from ${SOURCES.length} sources -> ${entries.length} unique entries (${builds} mirrors) -> data/mirrors.json\n`,
+  `\n${all.length} files from ${SOURCES.length} sources -> ${entries.length} unique builds -> ${INDEX}\n`,
 );
 if (unclassified.length) process.stderr.write(`unclassified: ${unclassified.join(", ")}\n`);
 if (process.argv.includes("--dump")) {

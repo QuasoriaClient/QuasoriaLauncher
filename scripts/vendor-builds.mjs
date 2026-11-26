@@ -2,7 +2,7 @@
 /**
  * Quasoria build vendoring.
  *
- * Reads the mirror index written by build-catalog.mjs (data/mirrors.json), picks ONE
+ * Reads the temporary archive index written by build-catalog.mjs, picks ONE
  * copy of every build (JavaScript if there is one, since it runs in every browser; then
  * the smallest file; ties broken by source priority),
  * copies it into builds/<id>/ and writes data/catalog.js pointing only at those
@@ -14,12 +14,16 @@
  *   node scripts/vendor-builds.mjs --catalog       # only rewrite data/catalog.js
  *   node scripts/vendor-builds.mjs --catalog --patch   # re-apply PATCHES to stored builds
  *
+ * --catalog and --patch work offline from what is already stored (builds/<id>/.source.json
+ * plus the current data/catalog.js), so the archive index is only needed to download.
+ *
  * Files are pulled with partial git clones from github.com (only the blobs that are
  * needed), so it works without raw.githubusercontent.com or GitHub Pages access.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, cpSync, statSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,11 +33,27 @@ const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
 const opt = (n) => (args.find((a) => a.startsWith(`--${n}=`)) || "").split("=")[1];
 
-const M = JSON.parse(readFileSync(join(ROOT, "data/mirrors.json"), "utf8"));
-const SRC = Object.fromEntries(M.sources.map((s, i) => [s.id, { ...s, prio: i }]));
+const INDEX = process.env.QUASORIA_INDEX || join(tmpdir(), "quasoria-index.json");
+const offline = !existsSync(INDEX);
+const prev = (() => {
+  // the catalog we already ship: used for titles/families when working offline
+  try {
+    const js = readFileSync(join(ROOT, "data/catalog.js"), "utf8");
+    return JSON.parse(js.slice(js.indexOf("{"), js.lastIndexOf("}") + 1));
+  } catch {
+    return { sources: [], entries: [] };
+  }
+})();
+if (offline && !flag("catalog") && !flag("patch")) {
+  console.error(`No archive index at ${INDEX}. Run node scripts/build-catalog.mjs first (or use --catalog / --patch).`);
+  process.exit(1);
+}
+const M = offline ? null : JSON.parse(readFileSync(INDEX, "utf8"));
+const SOURCES = M ? M.sources : prev.sources;
+const SRC = Object.fromEntries(SOURCES.map((s, i) => [s.id, { ...s, prio: i }]));
 
 /* ---------------------------------------------------------------- choose */
-// Mirror URL -> { repo, branch, path, dir }
+// Archive URL -> { repo, branch, path, dir }
 function locate(m) {
   const src = SRC[m.s];
   if (m.k === "page") {
@@ -47,27 +67,29 @@ function locate(m) {
 }
 
 const plan = [];
-for (const e of M.entries) {
-  // JS first: WASM builds need WASM-GC (and some need JSPI), which older browsers lack
-  let best = null;
-  const rts = e.runtimes.js?.length ? ["js"] : Object.keys(e.runtimes);
-  for (const rt of rts) {
-    for (const m of e.runtimes[rt]) {
-      const cand = { rt, m, prio: SRC[m.s].prio };
-      if (!best || m.b < best.m.b || (m.b === best.m.b && cand.prio < best.prio)) best = cand;
+if (M) {
+  for (const e of M.entries) {
+    // JS first: WASM builds need WASM-GC (and some need JSPI), which older browsers lack
+    let best = null;
+    const rts = e.runtimes.js?.length ? ["js"] : Object.keys(e.runtimes);
+    for (const rt of rts) {
+      for (const m of e.runtimes[rt]) {
+        const cand = { rt, m, prio: SRC[m.s].prio };
+        if (!best || m.b < best.m.b || (m.b === best.m.b && cand.prio < best.prio)) best = cand;
+      }
     }
+    const { runtimes, ...meta } = e;
+    plan.push({ id: e.id, family: e.family, rt: best.rt, size: best.m.b, from: best.m.s, loc: locate(best.m), meta });
   }
-  const others = Object.values(e.runtimes).flat().map((m) => m.s);
-  plan.push({
-    id: e.id,
-    family: e.family,
-    rt: best.rt,
-    size: best.m.b,
-    from: best.m.s,
-    alsoIn: [...new Set(others)].filter((s) => s !== best.m.s),
-    loc: locate(best.m),
-    entry: e,
-  });
+} else {
+  // offline: rebuild the plan from the copies already stored
+  for (const e of prev.entries) {
+    const f = join(BUILDS, e.id, ".source.json");
+    if (!existsSync(f)) continue;
+    const s = JSON.parse(readFileSync(f, "utf8"));
+    const { id, title, family, version } = e;
+    plan.push({ id, family, rt: s.runtime, size: e.size, from: s.source, loc: { repo: s.repo, path: s.path }, meta: { id, title, family, version } });
+  }
 }
 
 const only = opt("only") ? new Set(opt("only").split(",")) : null;
@@ -192,20 +214,18 @@ function sniffRuntime(dir, fallback) {
 const entries = [];
 for (const p of plan) {
   if (!isDone(p)) continue;
-  const { runtimes, ...rest } = p.entry;
   entries.push({
-    ...rest,
+    ...p.meta,
     rt: sniffRuntime(join(BUILDS, p.id), p.rt),
     path: `builds/${p.id}/`,
     size: dirSize(join(BUILDS, p.id)),
     from: p.from,
-    also: p.alsoIn,
   });
 }
 const out = {
   generated: new Date().toISOString().slice(0, 10),
-  sources: M.sources,
-  stats: { files: M.stats.files, entries: entries.length, bytes: entries.reduce((n, e) => n + e.size, 0) },
+  sources: SOURCES.map(({ id, name, repo }) => ({ id, name, repo })),
+  stats: { entries: entries.length, bytes: entries.reduce((n, e) => n + e.size, 0) },
   entries,
 };
 writeFileSync(
